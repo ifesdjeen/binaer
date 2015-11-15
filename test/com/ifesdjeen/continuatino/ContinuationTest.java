@@ -29,10 +29,9 @@ public class ContinuationTest {
       .readByte((Header header, Byte aByte) -> {
         return header;
       })
-      .branch(header1 -> header1.version == "1").readLong((header, opcode) -> { return header; }).end().back()
-      .branch(header2 -> header2.version == "2").readInt((header, opcode) -> { return header; })
+      .branch(header1 -> header1.version == "1").readLong((header, opcode) -> { return header; }).end()
+      .otherwise(header2 -> header2.version == "2").readInt((header, opcode) -> { return header; }).end();
 
-    ;
 
   }
 

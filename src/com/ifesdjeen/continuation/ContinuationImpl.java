@@ -3,6 +3,7 @@ package com.ifesdjeen.continuation;
 import io.netty.buffer.ByteBuf;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -46,7 +47,8 @@ public class ContinuationImpl<CURRENT, END> implements Continuation<CURRENT, END
 
   @Override
   public Branch<CURRENT, CURRENT, END> branch(Predicate<CURRENT> predicate) {
-    return new BranchImpl<CURRENT, CURRENT, END>(parentContinuation, predicate, (i) -> i);
+    return new BranchImpl<CURRENT, CURRENT, END>(new LinkedList<>(), predicate, parentContinuation, null);
+
   }
 
 //  @Override
