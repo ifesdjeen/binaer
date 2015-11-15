@@ -58,7 +58,7 @@ public class BranchStart<PREVIOUS, END> implements Branch<PREVIOUS, PREVIOUS, EN
   }
 
   @Override
-  public Branch<PREVIOUS, PREVIOUS, END> branch(Predicate<PREVIOUS> continuation) {
+  public <END> Branch<PREVIOUS, PREVIOUS, END> branch(Predicate<PREVIOUS> continuation) {
     throw new NotImplementedException();
   }
 

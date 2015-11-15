@@ -7,7 +7,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public interface Branch<CURRENT, PREVIOUS, END> extends Continuation<CURRENT, END> {
+public interface Branch<CURRENT, PREVIOUS, END> extends Continuation<CURRENT> {
 
   public <T> Branch<T, PREVIOUS, END> readByte(BiFunction<CURRENT, Byte, T> continuation);
 
@@ -24,8 +24,9 @@ public interface Branch<CURRENT, PREVIOUS, END> extends Continuation<CURRENT, EN
   public End<PREVIOUS, END> end(Function<CURRENT, END> endFn);
 
   public interface End<PREVIOUS, END> {
-    public <T> Branch<PREVIOUS, PREVIOUS, END> otherwise(Predicate<PREVIOUS> predicate);
-    public Function<ByteBuf, END> theEnd();
+    public Branch<PREVIOUS, PREVIOUS, END> otherwise(Predicate<PREVIOUS> predicate);
+    public Function<ByteBuf, END> toFn();
+    public Continuation<END> back();
   }
 
 
