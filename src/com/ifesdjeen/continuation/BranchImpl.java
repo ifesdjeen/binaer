@@ -11,16 +11,16 @@ import java.util.function.Predicate;
 public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVIOUS, END> {
 
 
-  private final List<Tuple<PREVIOUS, END>>  otherBranches;
-  private final Predicate<PREVIOUS>         currentPredicate;
-  private final Function<ByteBuf, PREVIOUS> beforeBranch;
-  private final Function<ByteBuf, CURRENT>  parentContinuation;
+  private final List<Tuple<PREVIOUS, END>>             otherBranches;
+  private final Predicate<PREVIOUS>                    currentPredicate;
+  private final Function<ByteBuf, PREVIOUS>            beforeBranch;
+  private final BiFunction<PREVIOUS, ByteBuf, CURRENT> parentContinuation;
 
   // For branch start
   public BranchImpl(List<Tuple<PREVIOUS, END>> otherBranches,
                     Predicate<PREVIOUS> currentPredicate,
                     Function<ByteBuf, PREVIOUS> beforeBranch,
-                    Function<ByteBuf, CURRENT> parentContinuation
+                    BiFunction<PREVIOUS, ByteBuf, CURRENT> parentContinuation
                    ) {
     this.otherBranches = otherBranches;
     this.currentPredicate = currentPredicate;
@@ -51,23 +51,15 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
 
   @Override
   public <T> Branch<T, PREVIOUS, END> readByte(BiFunction<CURRENT, Byte, T> continuation) {
-    if (parentContinuation == null) {
-      return new BranchImpl<>(otherBranches,
-                              currentPredicate,
-                              beforeBranch,
-                              (ByteBuf byteBuf) -> {
-                                CURRENT c = parentContinuation.apply(byteBuf);
-                                return continuation.apply(c, byteBuf.readByte());
-                              });
-    } else {
-      return new BranchImpl<>(otherBranches,
-                              currentPredicate,
-                              beforeBranch,
-                              (ByteBuf byteBuf) -> {
-                                CURRENT c = parentContinuation.apply(byteBuf);
-                                return continuation.apply(c, byteBuf.readByte());
-                              });
-    }
+
+    return new BranchImpl<>(otherBranches,
+                            currentPredicate,
+                            beforeBranch,
+                            (ignore, byteBuf) -> {
+                              CURRENT c = parentContinuation.apply(null, byteBuf);
+                              return continuation.apply(c, byteBuf.readByte());
+                            });
+
   }
 
   @Override
@@ -75,8 +67,8 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
     return new BranchImpl<>(otherBranches,
                             currentPredicate,
                             beforeBranch,
-                            (ByteBuf byteBuf) -> {
-                              CURRENT c = parentContinuation.apply(byteBuf);
+                            (ignore, byteBuf) -> {
+                              CURRENT c = parentContinuation.apply(null, byteBuf);
                               return continuation.apply(c, byteBuf.readInt());
                             });
   }
@@ -86,8 +78,8 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
     return new BranchImpl<>(otherBranches,
                             currentPredicate,
                             beforeBranch,
-                            (ByteBuf byteBuf) -> {
-                              CURRENT c = parentContinuation.apply(byteBuf);
+                            (ignore, byteBuf) -> {
+                              CURRENT c = parentContinuation.apply(null, byteBuf);
                               return continuation.apply(c, byteBuf.readLong());
                             });
   }
@@ -99,39 +91,28 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
 
   public End<PREVIOUS, END> end(Function<CURRENT, END> endFn) {
     otherBranches.add(new Tuple<PREVIOUS, END>(currentPredicate,
-                                               new Function<ByteBuf, END>() {
-                                                 @Override
-                                                 public END apply(ByteBuf byteBuf) {
-                                                   CURRENT cur = parentContinuation.apply(byteBuf);
-                                                   return endFn.apply(cur);
-                                                 }
+                                               (previous, byteBuf) -> {
+                                                 CURRENT cur = parentContinuation.apply(previous, byteBuf);
+                                                 return endFn.apply(cur);
                                                }));
-    return null;
-    //    return new BranchEnd<>(otherBranches,
-    //                           currentPredicate,
-    //                           beforeBranch);
+    return new BranchEnd<>(otherBranches,
+                           beforeBranch);
   }
 
   public class BranchEnd<PREVIOUS, END> implements Branch.End<PREVIOUS, END> {
 
     private final List<Tuple<PREVIOUS, END>>  otherBranches;
-    private final Predicate<PREVIOUS>         currentPredicate;
     private final Function<ByteBuf, PREVIOUS> beforeBranch;
 
     public BranchEnd(List<Tuple<PREVIOUS, END>> otherBranches,
-                     Predicate<PREVIOUS> currentPredicate,
                      Function<ByteBuf, PREVIOUS> beforeBranch) {
       this.otherBranches = otherBranches;
-      this.currentPredicate = currentPredicate;
       this.beforeBranch = beforeBranch;
     }
 
     @Override
     public <T> Branch<PREVIOUS, PREVIOUS, END> otherwise(Predicate<PREVIOUS> predicate) {
-      return new BranchImpl<PREVIOUS, PREVIOUS, END>(otherBranches,
-                                                     predicate,
-                                                     beforeBranch,
-                                                     beforeBranch);
+      return new BranchStart<>(otherBranches, predicate, beforeBranch);
     }
 
     @Override
@@ -140,7 +121,7 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
         PREVIOUS previous = beforeBranch.apply(byteBuf);
         for (Tuple<PREVIOUS, END> tuple : otherBranches) {
           if (tuple.getPredicate().test(previous)) {
-            return tuple.getPrev().apply(byteBuf);
+            return tuple.getPrev().apply(previous, byteBuf);
           }
         }
         throw new RuntimeException("No protocol matches");

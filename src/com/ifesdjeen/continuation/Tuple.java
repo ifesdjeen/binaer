@@ -2,19 +2,20 @@ package com.ifesdjeen.continuation;
 
 import io.netty.buffer.ByteBuf;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class Tuple<PREVIOUS, END> {
-  private final Function<ByteBuf, END> prev;
-  private final Predicate<PREVIOUS>    predicate;
+  private final BiFunction<PREVIOUS, ByteBuf, END> prev;
+  private final Predicate<PREVIOUS>                predicate;
 
-  public Tuple(Predicate<PREVIOUS> predicate, Function<ByteBuf, END> prev) {
+  public Tuple(Predicate<PREVIOUS> predicate, BiFunction<PREVIOUS, ByteBuf, END> prev) {
     this.prev = prev;
     this.predicate = predicate;
   }
 
-  public Function<ByteBuf, END> getPrev() {
+  public BiFunction<PREVIOUS, ByteBuf, END> getPrev() {
     return prev;
   }
 

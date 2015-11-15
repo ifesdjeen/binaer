@@ -47,7 +47,7 @@ public class ContinuationImpl<CURRENT, END> implements Continuation<CURRENT, END
 
   @Override
   public Branch<CURRENT, CURRENT, END> branch(Predicate<CURRENT> predicate) {
-    return new BranchImpl<CURRENT, CURRENT, END>(new LinkedList<>(), predicate, parentContinuation, null);
+    return new BranchStart<>(new LinkedList<>(), predicate, parentContinuation);
 
   }
 
@@ -73,15 +73,24 @@ public class ContinuationImpl<CURRENT, END> implements Continuation<CURRENT, END
 //  }
 
   public static <T, END> Continuation<T, END> readByte(Function<Byte, T> continuation) {
-    throw new NotImplementedException();
+    return new ContinuationImpl<>((byteBuf) -> {
+      byte b = byteBuf.readByte();
+      return continuation.apply(b);
+    });
   }
 
   public static  <T, END> Continuation<T, END> readInt(Function<Integer, T> continuation) {
-    throw new NotImplementedException();
+    return new ContinuationImpl<>((byteBuf) -> {
+      int b = byteBuf.readInt();
+      return continuation.apply(b);
+    });
   }
 
   public static <T, END> Continuation<T, END> readLong(Function<Long, T> continuation) {
-    throw new NotImplementedException();
+    return new ContinuationImpl<>((byteBuf) -> {
+      long b = byteBuf.readLong();
+      return continuation.apply(b);
+    });
   }
 
 }
