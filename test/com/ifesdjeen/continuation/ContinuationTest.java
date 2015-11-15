@@ -4,43 +4,63 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
 
 public class ContinuationTest {
 
   @Test
   public void simpleProtocolTest() {
-    ByteBuf buf = Unpooled.buffer();
-    buf.writeByte(2);
-    buf.writeByte(2);
-    buf.writeInt(3);
-    buf.writeByte(4);
-    buf.writeLong(5);
-    buf.writeLong(6);
-    buf.writeLong(7);
-
-
     Function<ByteBuf, Object> fn = ContinuationImpl
-      .readByte(version -> {
-        Header h = new Header();
-        h.version = version == 1 ? "1" : "2";
-        return h;
+      .readByte(first -> {
+        List<Number> o = new ArrayList<Number>();
+        o.add(first);
+        return o;
       })
-      .readByte((Header header, Byte aByte) -> {
-        return header;
+      .readInt((List<Number> list, Integer second) -> {
+        list.add(second);
+        return list;
       })
-      .branch(header1 -> header1.version == "1").readLong((header, opcode) -> {
-        return header;
-      }).end((i -> i))
-      .otherwise(header2 -> header2.version == "2").readInt((header, opcode) -> {
-        return header;
-      }).end(i -> i)
-      .theEnd();
+      .readLong((List<Number> list, Long third) -> {
+        list.add(third);
+        return list;
+      })
+      .branch(list -> list.get(0).intValue() == 1)
+      .readByte((list, firstBranch) -> {
+        list.add(firstBranch);
+        return list;
+      })
+      .end((i -> i))
+      .otherwise(list -> list.get(0).intValue() == 2)
+      .readByte((list, secondBranch) -> {
+        list.add((byte) (secondBranch + 1));
+        return list;
+      })
+      .end((i -> i))
+      .toFn();
 
-    System.out.println(fn.apply(buf));
+
+    assertThat(fn.apply(Unpooled.buffer().writeByte(1)
+                                .writeInt(2)
+                                .writeLong(3)
+                                .writeByte(4)),
+               is(new ArrayList<Number>(Arrays.asList((byte) 1, 2, 3L, (byte)4))));
+
+    assertThat(fn.apply(Unpooled.buffer().writeByte(2)
+                                .writeInt(2)
+                                .writeLong(3)
+                                .writeByte(4)),
+               is(new ArrayList<Number>(Arrays.asList((byte) 2, 2, 3L, (byte)5))));
 
   }
+
+
 
   public class Header {
     public String           version;
