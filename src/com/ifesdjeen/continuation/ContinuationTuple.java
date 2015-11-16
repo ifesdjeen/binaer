@@ -3,7 +3,6 @@ package com.ifesdjeen.continuation;
 import io.netty.buffer.ByteBuf;
 
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class ContinuationTuple<PREVIOUS, END> {

@@ -14,32 +14,32 @@ having a function that converts `ByteBuf` into desired format:
 
 ```java
 Function<ByteBuf, List<Number>> fn = ContinuationImpl
-	.readByte(first -> {
-			List<Number> o = new ArrayList<Number>();
-			o.add(first);
-			return o;
-		})
-	.readInt((List<Number> list, Integer second) -> {
-			list.add(second);
-			return list;
-		})
-	.readLong((List<Number> list, Long third) -> {
-			list.add(third);
-			return list;
-		})
-	.branch(list -> list.get(0).intValue() == 1)
-	.readByte((list, firstBranch) -> {
-			list.add(firstBranch);
-			return list;
-		})
-	.end((i -> i))
-	.otherwise(list -> list.get(0).intValue() == 2)
-	.readByte((list, secondBranch) -> {
-			list.add((byte) (secondBranch + 1));
-			return list;
-		})
-	.end((i -> i))
-	.toFn();
+  // Reads the first byte and constructs an Array that will collect all the seen values
+  .readByte(first -> {
+    List<Number> o = new ArrayList<Number>();
+    o.add(first);
+    return o;
+  })
+          // Constructs two branches: first one will be executed if first read byte is `1`,
+  .branch(list -> list.get(0).intValue() == 1,
+          new BranchStart<List<Number>>()
+            .readByte((List<Number> list, Byte firstBranch) -> {
+              list.add(firstBranch);
+              return list;
+            }),
+          // Second branch will be executed if first read byte is `2`,
+          list -> list.get(0).intValue() == 2,
+          new BranchStart<List<Number>>()
+            .readByte((List<Number> list, Byte firstBranch) -> {
+              list.add((byte) (firstBranch + 1));
+              return list;
+            }))
+   // Will receive the list that was composed by one of the branches and proceed with consuming the buffer
+  .readInt((list, integer) -> {
+    list.add(integer);
+    return list;
+  })
+  .toFn();
 ```
 
 Basically, you construct the set of nested lambdas, that will be executed one after another.
@@ -56,9 +56,7 @@ protocol versioning or possible branches depending on data types).
   * Ready protocol spec right from the constructed function.
   * Optional field consumption (field that either gets consumed and buffer rewinded or buffer remains on the
     previous position)
-  * Repeated fields ()
-  * Nested branches / repeats (should already work by now though)
-  * API cleanup
+  * Repeated fields
 
 # License
 
