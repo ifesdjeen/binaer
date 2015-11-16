@@ -42,21 +42,15 @@ public class ContinuationImpl<CURRENT> implements Continuation<CURRENT> {
   }
 
   @Override
-  public <T> Continuation<T> branch(Predicate<CURRENT> predicate,
-                                    BiFunction<CURRENT, ByteBuf, T> continuation) {
-    return null;
-  }
-
-  @Override
-  public <T> Continuation<T> branch(Predicate<CURRENT> predicate, BiFunction<CURRENT, ByteBuf, T> continuation,
+  public <T> Continuation<T> branch(Predicate<CURRENT> predicate, NestedContinuation<CURRENT, T> continuation,
                                     // TODO: chanage to branch
-                                    Predicate<CURRENT> predicate2, BiFunction<CURRENT, ByteBuf, T> continuation2) {
+                                    Predicate<CURRENT> predicate2, NestedContinuation<CURRENT, T> continuation2) {
     return new ContinuationImpl<>((byteBuf -> {
       CURRENT c = parentContinuation.apply(byteBuf);
       if (predicate.test(c)) {
-        return continuation.apply(c, byteBuf);
+        return continuation.toFn().apply(c, byteBuf); // TODO: avoid dereferencing every time
       } else if (predicate2.test(c)) {
-        return continuation2.apply(c, byteBuf);
+        return continuation2.toFn().apply(c, byteBuf);
       } else {
         throw new RuntimeException("No matching protocol clauses");
       }

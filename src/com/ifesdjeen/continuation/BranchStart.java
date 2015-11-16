@@ -41,7 +41,9 @@ public class BranchStart<CURRENT> implements NestedContinuation<CURRENT, CURRENT
 
   @Override
   public <T> NestedContinuation<CURRENT, T> branch(Predicate<CURRENT> predicate,
-                                                   BiFunction<CURRENT, ByteBuf, T> continuation) {
+                                                   NestedContinuation<CURRENT, T> continuation,
+                                                   Predicate<CURRENT> predicate2,
+                                                   NestedContinuation<CURRENT, T> continuation2) {
     throw new RuntimeException("You've just branched, can't branch on that level");
   }
 

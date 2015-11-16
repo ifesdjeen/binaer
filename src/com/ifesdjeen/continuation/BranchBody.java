@@ -50,9 +50,25 @@ public class BranchBody<PREVIOUS, CURRENT> implements NestedContinuation<PREVIOU
 
   @Override
   public <T> NestedContinuation<PREVIOUS, T> branch(Predicate<CURRENT> predicate,
-                                                    BiFunction<CURRENT, ByteBuf, T> continuation) {
-    return null;
+                                                    NestedContinuation<CURRENT, T> continuation,
+                                                    Predicate<CURRENT> predicate2,
+                                                    NestedContinuation<CURRENT, T> continuation2) {
+    return new BranchBody<>((previous) -> {
+      Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
+      return (byteBuf) -> {
+        CURRENT c = fn.apply(byteBuf);
+        if (predicate.test(c)) {
+          return continuation.toFn().apply(c, byteBuf); // TODO: avoid dereferencing every time
+        } else if (predicate2.test(c)) {
+          return continuation2.toFn().apply(c, byteBuf);
+        } else {
+          throw new RuntimeException("No matching protocol clauses");
+        }
+      };
+    });
   }
+
+
 
   @Override
   public BiFunction<PREVIOUS, ByteBuf, CURRENT> toFn() {

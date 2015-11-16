@@ -14,7 +14,9 @@ public interface NestedContinuation<INIT, CURRENT> { // extends Function<ByteBuf
   public <T> NestedContinuation<INIT, T> readLong(BiFunction<CURRENT, Long, T> continuation);
 
   public <T> NestedContinuation<INIT, T> branch(Predicate<CURRENT> predicate,
-                                                BiFunction<CURRENT, ByteBuf, T> continuation);
+                                                NestedContinuation<CURRENT, T> continuation,
+                                                Predicate<CURRENT> predicate2,
+                                                NestedContinuation<CURRENT, T> continuation2);
 
   public BiFunction<INIT, ByteBuf, CURRENT> toFn();
   //public <T> Continuation<T, END> repeat(BiFunction<CURRENT, Integer, T> continuation);
