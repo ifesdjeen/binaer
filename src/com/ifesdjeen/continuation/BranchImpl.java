@@ -3,20 +3,21 @@ package com.ifesdjeen.continuation;
 import io.netty.buffer.ByteBuf;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVIOUS, END> {
+public class BranchImpl<CURRENT, PREVIOUS> implements Branch<CURRENT, PREVIOUS> {
 
 
-  private final List<Tuple<PREVIOUS, END>>             otherBranches;
+  private final List<Tuple<PREVIOUS, ?>>               otherBranches;
   private final Predicate<PREVIOUS>                    currentPredicate;
   private final Function<ByteBuf, PREVIOUS>            beforeBranch;
   private final BiFunction<PREVIOUS, ByteBuf, CURRENT> parentContinuation;
 
-  public BranchImpl(List<Tuple<PREVIOUS, END>> otherBranches,
+  public BranchImpl(List<Tuple<PREVIOUS, ?>> otherBranches,
                     Predicate<PREVIOUS> currentPredicate,
                     Function<ByteBuf, PREVIOUS> beforeBranch,
                     BiFunction<PREVIOUS, ByteBuf, CURRENT> parentContinuation
@@ -28,7 +29,7 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
   }
 
   @Override
-  public <T> Branch<T, PREVIOUS, END> readByte(BiFunction<CURRENT, Byte, T> continuation) {
+  public <T> Branch<T, PREVIOUS> readByte(BiFunction<CURRENT, Byte, T> continuation) {
 
     return new BranchImpl<>(otherBranches,
                             currentPredicate,
@@ -41,7 +42,7 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
   }
 
   @Override
-  public <T> Branch<T, PREVIOUS, END> readInt(BiFunction<CURRENT, Integer, T> continuation) {
+  public <T> Branch<T, PREVIOUS> readInt(BiFunction<CURRENT, Integer, T> continuation) {
     return new BranchImpl<>(otherBranches,
                             currentPredicate,
                             beforeBranch,
@@ -52,7 +53,7 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
   }
 
   @Override
-  public <T> Branch<T, PREVIOUS, END> readLong(BiFunction<CURRENT, Long, T> continuation) {
+  public <T> Branch<T, PREVIOUS> readLong(BiFunction<CURRENT, Long, T> continuation) {
     return new BranchImpl<>(otherBranches,
                             currentPredicate,
                             beforeBranch,
@@ -63,17 +64,25 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
   }
 
   @Override
-  public <END> Branch<CURRENT, CURRENT, END> branch(Predicate<CURRENT> continuation) {
-    throw new NotImplementedException();
+  public Branch<CURRENT, CURRENT> branch(Predicate<CURRENT> predicate) {
+    return new BranchStart<>(new LinkedList<>(), predicate, byteBuf -> {
+      CURRENT c = parentContinuation.apply(null, byteBuf);
+      return c;
+    });
   }
 
-  public End<PREVIOUS, END> end(Function<CURRENT, END> endFn) {
-    otherBranches.add(new Tuple<PREVIOUS, END>(currentPredicate,
-                                               (previous, byteBuf) -> {
-                                                 CURRENT cur = parentContinuation.apply(previous, byteBuf);
-                                                 return endFn.apply(cur);
-                                               }));
-    return new BranchEnd<>(otherBranches,
+  public End<PREVIOUS, CURRENT> end() {
+    otherBranches.add(new Tuple<PREVIOUS, CURRENT>(currentPredicate,
+                                                   (previous, byteBuf) -> {
+                                                     CURRENT cur = parentContinuation.apply(
+                                                       previous, byteBuf);
+                                                     return cur;
+                                                   }));
+
+    // TODO: add typecheck
+    List<Tuple<PREVIOUS, CURRENT>> o = (List<Tuple<PREVIOUS, CURRENT>>) (List) otherBranches;
+
+    return new BranchEnd<>(o,
                            beforeBranch);
   }
 
@@ -89,8 +98,10 @@ public class BranchImpl<CURRENT, PREVIOUS, END> implements Branch<CURRENT, PREVI
     }
 
     @Override
-    public Branch<PREVIOUS, PREVIOUS, END> otherwise(Predicate<PREVIOUS> predicate) {
-      return new BranchStart<>(otherBranches, predicate, beforeBranch);
+    public Branch<PREVIOUS, PREVIOUS> otherwise(Predicate<PREVIOUS> predicate) {
+      // TODO: add typechecks!
+      List<Tuple<PREVIOUS, ?>> o = (List<Tuple<PREVIOUS, ?>>)(List)otherBranches;
+      return new BranchStart<>(o, predicate, beforeBranch);
     }
 
     @Override

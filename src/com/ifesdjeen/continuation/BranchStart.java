@@ -8,15 +8,15 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public class BranchStart<PREVIOUS, END> implements Branch<PREVIOUS, PREVIOUS, END> {
+public class BranchStart<PREVIOUS> implements Branch<PREVIOUS, PREVIOUS> {
 
 
-  private final List<Tuple<PREVIOUS, END>>  otherBranches;
+  private final List<Tuple<PREVIOUS, ?>>    otherBranches;
   private final Predicate<PREVIOUS>         currentPredicate;
   private final Function<ByteBuf, PREVIOUS> beforeBranch;
 
   // For branch start
-  public BranchStart(List<Tuple<PREVIOUS, END>> otherBranches,
+  public BranchStart(List<Tuple<PREVIOUS, ?>> otherBranches,
                      Predicate<PREVIOUS> currentPredicate,
                      Function<ByteBuf, PREVIOUS> beforeBranch
                     ) {
@@ -26,7 +26,7 @@ public class BranchStart<PREVIOUS, END> implements Branch<PREVIOUS, PREVIOUS, EN
   }
 
   @Override
-  public <T> Branch<T, PREVIOUS, END> readByte(BiFunction<PREVIOUS, Byte, T> continuation) {
+  public <T> Branch<T, PREVIOUS> readByte(BiFunction<PREVIOUS, Byte, T> continuation) {
 
     return new BranchImpl<>(otherBranches,
                             currentPredicate,
@@ -38,7 +38,7 @@ public class BranchStart<PREVIOUS, END> implements Branch<PREVIOUS, PREVIOUS, EN
   }
 
   @Override
-  public <T> Branch<T, PREVIOUS, END> readInt(BiFunction<PREVIOUS, Integer, T> continuation) {
+  public <T> Branch<T, PREVIOUS> readInt(BiFunction<PREVIOUS, Integer, T> continuation) {
     return new BranchImpl<>(otherBranches,
                             currentPredicate,
                             beforeBranch,
@@ -48,7 +48,7 @@ public class BranchStart<PREVIOUS, END> implements Branch<PREVIOUS, PREVIOUS, EN
   }
 
   @Override
-  public <T> Branch<T, PREVIOUS, END> readLong(BiFunction<PREVIOUS, Long, T> continuation) {
+  public <T> Branch<T, PREVIOUS> readLong(BiFunction<PREVIOUS, Long, T> continuation) {
     return new BranchImpl<>(otherBranches,
                             currentPredicate,
                             beforeBranch,
@@ -58,11 +58,12 @@ public class BranchStart<PREVIOUS, END> implements Branch<PREVIOUS, PREVIOUS, EN
   }
 
   @Override
-  public <END> Branch<PREVIOUS, PREVIOUS, END> branch(Predicate<PREVIOUS> continuation) {
-    throw new NotImplementedException();
+  public End<PREVIOUS, PREVIOUS> end() {
+    throw new RuntimeException("can't touch this");
   }
 
-  public End<PREVIOUS, END> end(Function<PREVIOUS, END> endFn) {
+  @Override
+  public Branch<PREVIOUS, PREVIOUS> branch(Predicate<PREVIOUS> continuation) {
     throw new NotImplementedException();
   }
 

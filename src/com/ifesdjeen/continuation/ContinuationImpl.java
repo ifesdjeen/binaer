@@ -11,7 +11,7 @@ public class ContinuationImpl<CURRENT> implements Continuation<CURRENT> {
 
   private final Function<ByteBuf, CURRENT> parentContinuation;
 
-  public ContinuationImpl(Function<ByteBuf, CURRENT> parent) {
+  private ContinuationImpl(Function<ByteBuf, CURRENT> parent) {
     this.parentContinuation = parent;
   }
 
@@ -43,9 +43,13 @@ public class ContinuationImpl<CURRENT> implements Continuation<CURRENT> {
   }
 
   @Override
-  public <END> Branch<CURRENT, CURRENT, END> branch(Predicate<CURRENT> predicate) {
+  public Branch<CURRENT, CURRENT> branch(Predicate<CURRENT> predicate) {
     return new BranchStart<>(new LinkedList<>(), predicate, parentContinuation);
+  }
 
+  @Override
+  public Function<ByteBuf, CURRENT> toFn() {
+    return parentContinuation;
   }
 
   //  @Override
@@ -68,6 +72,8 @@ public class ContinuationImpl<CURRENT> implements Continuation<CURRENT> {
   //  public END apply(ByteBuf byteBuf) {
   //    return null;
   //  }
+
+  // TODO: contunue
 
   public static <T> Continuation<T> readByte(Function<Byte, T> continuation) {
     return new ContinuationImpl<>((byteBuf) -> {
