@@ -14,7 +14,13 @@ public interface Continuation<CURRENT> { // extends Function<ByteBuf, END>
 
   public <T> Continuation<T> readLong(BiFunction<CURRENT, Long, T> continuation);
 
-  public Branch<CURRENT, CURRENT> branch(Predicate<CURRENT> continuation);
+  public <T> Continuation<T> branch(Predicate<CURRENT> predicate,
+                                    BiFunction<CURRENT, ByteBuf, T> continuation);
+
+  public <T> Continuation<T> branch(Predicate<CURRENT> predicate,
+                                    BiFunction<CURRENT, ByteBuf, T> continuation,
+                                    Predicate<CURRENT> predicate2,
+                                    BiFunction<CURRENT, ByteBuf, T> continuation2);
 
   public Function<ByteBuf, CURRENT> toFn();
   //public <T> Continuation<T, END> repeat(BiFunction<CURRENT, Integer, T> continuation);

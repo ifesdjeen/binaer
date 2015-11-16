@@ -2,7 +2,6 @@ package com.ifesdjeen.continuation;
 
 import io.netty.buffer.ByteBuf;
 
-import java.util.LinkedList;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -43,8 +42,25 @@ public class ContinuationImpl<CURRENT> implements Continuation<CURRENT> {
   }
 
   @Override
-  public Branch<CURRENT, CURRENT> branch(Predicate<CURRENT> predicate) {
-    return new BranchStart<>(new LinkedList<>(), predicate, parentContinuation);
+  public <T> Continuation<T> branch(Predicate<CURRENT> predicate,
+                                    BiFunction<CURRENT, ByteBuf, T> continuation) {
+    return null;
+  }
+
+  @Override
+  public <T> Continuation<T> branch(Predicate<CURRENT> predicate, BiFunction<CURRENT, ByteBuf, T> continuation,
+                                    // TODO: chanage to branch
+                                    Predicate<CURRENT> predicate2, BiFunction<CURRENT, ByteBuf, T> continuation2) {
+    return new ContinuationImpl<>((byteBuf -> {
+      CURRENT c = parentContinuation.apply(byteBuf);
+      if (predicate.test(c)) {
+        return continuation.apply(c, byteBuf);
+      } else if (predicate2.test(c)) {
+        return continuation2.apply(c, byteBuf);
+      } else {
+        throw new RuntimeException("No matching protocol clauses");
+      }
+    }));
   }
 
   @Override
