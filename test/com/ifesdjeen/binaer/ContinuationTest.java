@@ -1,4 +1,4 @@
-package com.ifesdjeen.continuation;
+package com.ifesdjeen.binaer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -14,8 +14,8 @@ public class ContinuationTest {
 
   @Test
   public void simpleProtocolTest() {
-    Continuation<List<Number>, List<Number>> continuation =
-      Continuation
+    Binaer<List<Number>, List<Number>> continuation =
+      Binaer
         .startWithByte((List<Number> o, Byte first) -> {
           o.add(first);
           return o;
@@ -29,12 +29,12 @@ public class ContinuationTest {
           return list;
         })
         .branch(list -> list.get(0).intValue() == 1,
-                Continuation.startWithByte((List<Number> list, Byte firstBranch) -> {
+                Binaer.startWithByte((List<Number> list, Byte firstBranch) -> {
                   list.add(firstBranch);
                   return list;
                 }),
                 list -> list.get(0).intValue() == 2,
-                Continuation.startWithByte((List<Number> list, Byte firstBranch) -> {
+                Binaer.startWithByte((List<Number> list, Byte firstBranch) -> {
                   list.add((byte) (firstBranch + 1));
                   return list;
                 }))
@@ -74,16 +74,16 @@ public class ContinuationTest {
 
   @Test
   public void asdTest() {
-    Continuation<Void, Object> continuation =
-      Continuation
+    Binaer<Void, Object> continuation =
+      Binaer
         .startWithByte(Function.identity())
         .branch(
           (Byte type) -> type == (byte) 1,
-          Continuation.startWithLong((Byte type, Long l) -> new Date(l)),
+          Binaer.startWithLong((Byte type, Long l) -> new Date(l)),
 
           (Byte type) -> type == (byte) 2,
-          Continuation.startWithInt((Byte type, Integer stringLength) -> stringLength)
-                      .readString(Function.identity(),
+          Binaer.startWithInt((Byte type, Integer stringLength) -> stringLength)
+                .readString(Function.identity(),
                                   (String s) -> s));
 
     System.out.println(
@@ -103,28 +103,28 @@ public class ContinuationTest {
 
   @Test
   public void nestedBranchTest() {
-    Continuation<List<Number>, List<Number>> continuation =
-      Continuation
+    Binaer<List<Number>, List<Number>> continuation =
+      Binaer
         .startWithByte((List<Number> o, Byte first) -> {
           o.add(first);
           return o;
         })
         .branch(list -> list.get(0).intValue() == 1,
-                Continuation.startWithInt((List<Number> list, Integer firstBranch) -> {
+                Binaer.startWithInt((List<Number> list, Integer firstBranch) -> {
                   list.add(firstBranch);
                   return list;
                 }).branch(list -> list.get(1).intValue() == 300,
-                          Continuation.startWithInt((list, i) -> {
+                          Binaer.startWithInt((list, i) -> {
                             list.add(i + 100);
                             return list;
                           }),
                           list -> list.get(1).intValue() == 400,
-                          Continuation.startWithInt((list, i) -> {
+                          Binaer.startWithInt((list, i) -> {
                             list.add(i + 200);
                             return list;
                           })),
                 list -> list.get(0).intValue() == 2,
-                Continuation.startWithByte((List<Number> list, Byte firstBranch) -> {
+                Binaer.startWithByte((List<Number> list, Byte firstBranch) -> {
                   list.add(firstBranch);
                   return list;
                 }))
@@ -162,9 +162,9 @@ public class ContinuationTest {
 
   @Test
   public void pascalStringTest() {
-    Continuation<Void, String> continuation =
-      Continuation.startWithInt(Function.identity())
-                  .readString(Function.identity(),
+    Binaer<Void, String> continuation =
+      Binaer.startWithInt(Function.identity())
+            .readString(Function.identity(),
                               (Integer integer, String s) -> s);
 
     assertThat(continuation.toFn(() -> null)
@@ -176,14 +176,14 @@ public class ContinuationTest {
 
   @Test
   public void repeatedStringTest() {
-    Continuation<Integer, String> netString =
-      Continuation.startWithInt((Integer a_, Integer i) -> i)
-                  .readString(Function.identity(),
+    Binaer<Integer, String> netString =
+      Binaer.startWithInt((Integer a_, Integer i) -> i)
+            .readString(Function.identity(),
                               Function.identity());
 
-    Continuation<Void, List<String>> continuation =
-      Continuation.startWithInt(Function.identity())
-                  .repeat(netString,
+    Binaer<Void, List<String>> continuation =
+      Binaer.startWithInt(Function.identity())
+            .repeat(netString,
                           Function.identity(),
                           (prev, l) -> l);
 

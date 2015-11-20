@@ -1,4 +1,4 @@
-package com.ifesdjeen.continuation;
+package com.ifesdjeen.binaer;
 
 import io.netty.buffer.ByteBuf;
 
@@ -9,18 +9,17 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOUS, CURRENT> {
+public class BinaerImpl<INIT, CURRENT> implements Binaer<INIT, CURRENT> {
 
-  private final Function<PREVIOUS, Function<ByteBuf, CURRENT>> parentContinuation;
+  private final Function<INIT, Function<ByteBuf, CURRENT>> parentContinuation;
 
-  public ContinuationImpl(Function<PREVIOUS, Function<ByteBuf, CURRENT>> parentContinuation) {
+  public BinaerImpl(Function<INIT, Function<ByteBuf, CURRENT>> parentContinuation) {
     this.parentContinuation = parentContinuation;
   }
 
-
   @Override
-  public <T> Continuation<PREVIOUS, T> readByte(BiFunction<CURRENT, Byte, T> continuation) {
-    return new ContinuationImpl<>((previous) -> {
+  public <T> Binaer<INIT, T> readByte(BiFunction<CURRENT, Byte, T> continuation) {
+    return new BinaerImpl<>((previous) -> {
       Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
       return (byteBuffer) -> {
         CURRENT c = fn.apply(byteBuffer);
@@ -30,8 +29,8 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   }
 
   @Override
-  public <T> Continuation<PREVIOUS, T> readInt(BiFunction<CURRENT, Integer, T> continuation) {
-    return new ContinuationImpl<>((previous) -> {
+  public <T> Binaer<INIT, T> readInt(BiFunction<CURRENT, Integer, T> continuation) {
+    return new BinaerImpl<>((previous) -> {
       Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
       return (byteBuffer) -> {
         CURRENT c = fn.apply(byteBuffer);
@@ -41,8 +40,8 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   }
 
   @Override
-  public <T> Continuation<PREVIOUS, T> readLong(BiFunction<CURRENT, Long, T> continuation) {
-    return new ContinuationImpl<>((previous) -> {
+  public <T> Binaer<INIT, T> readLong(BiFunction<CURRENT, Long, T> continuation) {
+    return new BinaerImpl<>((previous) -> {
       Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
       return (byteBuffer) -> {
         CURRENT c = fn.apply(byteBuffer);
@@ -57,10 +56,10 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   //  }
 
   @Override
-  public <T> Continuation<PREVIOUS, T> readString(Function<CURRENT, Integer> length,
-                                                  BiFunction<CURRENT, String, T> continuation) {
+  public <T> Binaer<INIT, T> readString(Function<CURRENT, Integer> length,
+                                        BiFunction<CURRENT, String, T> continuation) {
 
-    return new ContinuationImpl<>((previous) -> {
+    return new BinaerImpl<>((previous) -> {
       Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
 
       return (byteBuf) -> {
@@ -73,17 +72,11 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   }
 
   @Override
-  public <T> Continuation<PREVIOUS, T> readString(Function<CURRENT, Integer> length, Function<String, T> continuation) {
-    return readString(length,
-                      (a, b) -> continuation.apply(b));
-  }
-
-  @Override
-  public <T> Continuation<PREVIOUS, T> branch(Predicate<CURRENT> predicate,
-                                              Continuation<CURRENT, T> continuation,
-                                              Predicate<CURRENT> predicate2,
-                                              Continuation<CURRENT, T> continuation2) {
-    return new ContinuationImpl<>((previous) -> {
+  public <T> Binaer<INIT, T> branch(Predicate<CURRENT> predicate,
+                                    Binaer<CURRENT, T> continuation,
+                                    Predicate<CURRENT> predicate2,
+                                    Binaer<CURRENT, T> continuation2) {
+    return new BinaerImpl<>((previous) -> {
       Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
       return (byteBuf) -> {
         CURRENT c = fn.apply(byteBuf);
@@ -101,10 +94,10 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   }
 
   @Override
-  public <ITEM, NEXT> Continuation<PREVIOUS, NEXT> repeat(Continuation<CURRENT, ITEM> continuation,
-                                                          Function<CURRENT, Integer> length,
-                                                          BiFunction<CURRENT, List<ITEM>, NEXT> merge) {
-    return new ContinuationImpl<>((previous) -> {
+  public <ITEM, NEXT> Binaer<INIT, NEXT> repeat(Binaer<CURRENT, ITEM> continuation,
+                                                Function<CURRENT, Integer> length,
+                                                BiFunction<CURRENT, List<ITEM>, NEXT> merge) {
+    return new BinaerImpl<>((previous) -> {
       Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
       return (byteBuf) -> {
         CURRENT c = fn.apply(byteBuf);
@@ -118,14 +111,14 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   }
 
   @Override
-  public BiFunction<PREVIOUS, ByteBuf, CURRENT> toBiFn() {
+  public BiFunction<INIT, ByteBuf, CURRENT> toBiFn() {
     return ((previous, byteBuf) -> {
       return parentContinuation.apply(previous).apply(byteBuf);
     });
   }
 
   @Override
-  public Function<ByteBuf, CURRENT> toFn(Supplier<PREVIOUS> supplier) {
+  public Function<ByteBuf, CURRENT> toFn(Supplier<INIT> supplier) {
     return (byteBuf -> {
       return parentContinuation.apply(supplier.get()).apply(byteBuf);
     });

@@ -1,4 +1,4 @@
-package com.ifesdjeen.continuation.support;
+package com.ifesdjeen.binaer.support;
 
 public class FlagHelper {
 

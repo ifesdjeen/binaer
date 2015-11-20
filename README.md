@@ -1,11 +1,15 @@
-# Continuation
+# Binär
 
-`Continuation` is a utility for composing flexible binary protocol parsers by using the Continuation
-Passing Style programming.
+`Binär` is a utility for composing flexible binary protocol parsers by using the
+Continuation Passing Style programming.
 
-When implementing complex protocols, it's often the case that imperative style code turns out to be
-complicated to read, extend and compose. By using CPS, you can create branches, repeats, optional
-fields
+When implementing complex protocols, it's often the case that imperative style
+code turns out to be complicated to read, extend and compose. By using CPS, you
+can create branches, repeats, optional fields, and combine them all into the
+single-pass function.
+
+When using Lambdas on JVM, many things will get optimized and you'll have a fast
+protocol and flexible parser that's easy to maintain, debug and extend.
 
 # General idea
 
@@ -36,15 +40,15 @@ return just the resulting String.
 
 
 ```java
-Function<ByteBuf, String> continuation =
-    Continuation.startWithInt(Function.identity())   // (1) Integer -> Integer: reads the Integer, that specifies the amount of chars in string
-                .readString(Function.identity(),     // (2) Integer -> Integer: Function that extracts the length of the string
-                            (String s) -> s)         // (3) String -> String: Return the decoded string itself
-                .toFn();
+Function<ByteBuf, String> parser =
+    Binaer.startWithInt(Function.identity())   // (1) Integer -> Integer: reads the Integer, that specifies the amount of chars in string
+          .readString(Function.identity(),     // (2) Integer -> Integer: Function that extracts the length of the string
+                      (String s) -> s)         // (3) String -> String: Return the decoded string itself
+          .toFn();
 
-continuation.apply(Unpooled.buffer()
-                           .writeInt(6)
-                           .writeBytes("abcdef".getBytes()));
+parser.apply(Unpooled.buffer()
+             .writeInt(6)
+             .writeBytes("abcdef".getBytes()));
 // => "abcdef"
 ```
 
@@ -59,30 +63,31 @@ With branch, you can choose how you decode the object you're working on. For
 example, you're decoding a protocol that has two data types: `date` and `string`
 
 ```java
-Continuation<Void, Object> continuation =
-     Continuation
+Function<ByteBuf, Object> parser =
+     Binaer
         .startWithByte(Function.identity())
         .branch(
           // If the type is 1, which is our `date`
           (Byte type) -> type == (byte) 1,
-          Continuation.startWithLong((Byte type, Long l) -> new Date(l)),
+          Continuation.startWithLong((Long l) -> new Date(l)),
 
            // If the type is 2, which is our `string`
           (Byte type) -> type == (byte) 2,
-          Continuation.startWithInt((Byte type, Integer stringLength) -> stringLength)
-                      .readString((Integer integer, String s) -> s,
-                                  Function.identity()));
+          Continuation.startWithInt((Integer stringLength) -> stringLength)
+                      .readString((String s) -> s,
+                                  Function.identity()))
+         .toFn();
 
-continuation.toFn().apply(null, Unpooled.buffer()
-                                        .writeByte(1)
-                                        .writeLong(System.currentTimeMillis()));
-                                        //) Parses a date:
+parser.toFn().apply(Unpooled.buffer()
+                            .writeByte(1)
+                            .writeLong(System.currentTimeMillis()));
+// Parses a date:
 // => Fri Nov 20 16:44:49 CET 2015
 
-continuation.toFn().apply(null, Unpooled.buffer()
-                                        .writeByte(2)
-                                        .writeInt(6)
-                                        .writeBytes("abcdef".getBytes())));
+parser.toFn().apply(Unpooled.buffer()
+                            .writeByte(2)
+                            .writeInt(6)
+                            .writeBytes("abcdef".getBytes())));
 // Parses a string:
 // => "abcdef"
 ```
@@ -94,28 +99,29 @@ parser that consumes a list of strings, we can do it as follows:
 
 ```java
 // Define a "repeated" part - our netstring protocol
-Continuation<Integer, String> netString =
-      Continuation.startWithInt((Integer a_, Integer i) -> i)
-                  .readString((Integer integer, String s) -> s,
-                              Function.identity());
+Function<ByteBuf, String> netString =
+      Binaer.startWithInt((Integer i) -> i)
+            .readString((Integer integer, String s) -> s,
+                        Function.identity())
+            .toFn();
 
 // And define a parser for repeated netstrings:
 // We'll first find how many strings there are, and then parse each one of them separately
-Continuation<Void, List<String>> continuation =
-      Continuation.startWithInt(Function.identity())
-                  .repeat(netString,
-                          Function.identity(),
-                          (prev, l) -> l);
+Function<ByteBuf, List<String>> parser =
+      Binaer.startWithInt(Function.identity())
+            .repeat(netString,
+                    Function.identity(),
+                    (prev, l) -> l)
+            .toFn();
 
-continuation.toFn(() -> null)
-            .apply(Unpooled.buffer()
-                           .writeInt(3)
-                           .writeInt(6)
-                           .writeBytes("abcdef".getBytes())
-                           .writeInt(5)
-                           .writeBytes("fghij".getBytes())
-                           .writeInt(4)
-                           .writeBytes("klmn".getBytes())));
+parser.apply(Unpooled.buffer()
+                     .writeInt(3)
+                     .writeInt(6)
+                     .writeBytes("abcdef".getBytes())
+                     .writeInt(5)
+                     .writeBytes("fghij".getBytes())
+                     .writeInt(4)
+                     .writeBytes("klmn".getBytes())));
 // => ["abcdef", "fghij", "klmn"];
 ```
 
