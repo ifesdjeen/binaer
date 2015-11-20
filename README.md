@@ -116,6 +116,7 @@ Every operator you can see (branches, repeated fields and so on) can be nested a
   * More data types
   * More combiners
   * More default protocol implementations
+
 # License
 
 Copyright(C) 2015-2016 Alex Petrov
