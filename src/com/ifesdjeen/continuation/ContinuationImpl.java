@@ -3,6 +3,8 @@ package com.ifesdjeen.continuation;
 import io.netty.buffer.ByteBuf;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -50,15 +52,25 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
     });
   }
 
-  @Override
-  public <T> Continuation<PREVIOUS, T> readString(BiFunction<CURRENT, String, T> continuation, Integer length) {
-    throw new NotImplementedException();
-  }
+//  @Override
+//  public <T> Continuation<PREVIOUS, T> readString(BiFunction<CURRENT, String, T> continuation, Integer length) {
+//    throw new NotImplementedException();
+//  }
 
   @Override
   public <T> Continuation<PREVIOUS, T> readString(BiFunction<CURRENT, String, T> continuation,
                                                   Function<CURRENT, Integer> length) {
-    throw new NotImplementedException();
+
+    return new ContinuationImpl<>((previous) -> {
+      Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
+
+      return (byteBuf) -> {
+        CURRENT current = fn.apply(byteBuf);
+        byte[] bytes = new byte[length.apply(current)];
+        byteBuf.readBytes(bytes);
+        return continuation.apply(current, new String(bytes));
+      };
+    });
   }
 
   @Override
@@ -79,6 +91,23 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
         } else {
           throw new RuntimeException("No matching protocol clauses");
         }
+      };
+    });
+  }
+
+  @Override
+  public <ITEM, NEXT> Continuation<PREVIOUS, NEXT> repeat(Continuation<CURRENT, ITEM> continuation,
+                                                          Function<CURRENT, Integer> length,
+                                                          BiFunction<CURRENT, List<ITEM>, NEXT> merge) {
+    return new ContinuationImpl<>((previous) -> {
+      Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
+      return (byteBuf) -> {
+        CURRENT c = fn.apply(byteBuf);
+        List<ITEM> l = new ArrayList<>();
+        for (int i = 0; i < length.apply(c); i++) {
+          l.add(continuation.toFn().apply(c, byteBuf));
+        }
+        return merge.apply(c, l);
       };
     });
   }

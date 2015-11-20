@@ -2,6 +2,7 @@ package com.ifesdjeen.continuation;
 
 import io.netty.buffer.ByteBuf;
 
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -15,8 +16,8 @@ public interface Continuation<INIT, CURRENT> {
 
   <T> Continuation<INIT, T> readLong(BiFunction<CURRENT, Long, T> continuation);
 
-  <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
-                                       Integer length);
+//  <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
+//                                       Integer length);
 
   <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
                                        Function<CURRENT, Integer> length);
@@ -25,6 +26,16 @@ public interface Continuation<INIT, CURRENT> {
                                    Continuation<CURRENT, T> continuation,
                                    Predicate<CURRENT> predicate2,
                                    Continuation<CURRENT, T> continuation2);
+
+//  <T> Continuation<INIT, T> repeat(Continuation<CURRENT, T> continuation,
+//                                   Integer length);
+
+  public <ITEM, NEXT> Continuation<INIT, NEXT> repeat(Continuation<CURRENT, ITEM> continuation,
+                                                      Function<CURRENT, Integer> length,
+                                                      BiFunction<CURRENT, List<ITEM>, NEXT> merge);
+
+//  <T> Continuation<INIT, T> repeat(Continuation<CURRENT, T> continuation,
+//                                   Predicate<T> length);
 
   BiFunction<INIT, ByteBuf, CURRENT> toFn();
 

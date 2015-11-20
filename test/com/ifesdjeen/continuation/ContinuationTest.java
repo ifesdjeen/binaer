@@ -73,6 +73,35 @@ public class ContinuationTest {
   }
 
   @Test
+  public void asdTest() {
+    Continuation<Void, Object> continuation =
+      Continuation
+        .startWithByte(Function.identity())
+        .branch(
+          (Byte type) -> type == (byte) 1,
+          Continuation.startWithLong((Byte type, Long l) -> new Date(l)),
+
+          (Byte type) -> type == (byte) 2,
+          Continuation.startWithInt((Byte type, Integer stringLength) -> stringLength)
+                      .readString((Integer integer, String s) -> s,
+                                  Function.identity()));
+
+    System.out.println(
+      continuation.toFn().apply(null, Unpooled.buffer()
+                                              .writeByte(1)
+                                              .writeLong(System.currentTimeMillis())));
+
+    System.out.println(
+      continuation.toFn().apply(null, Unpooled.buffer()
+                                              .writeByte(2)
+                                              .writeInt(6)
+                                              .writeBytes("abcdef".getBytes())));
+
+
+  }
+
+
+  @Test
   public void nestedBranchTest() {
     Continuation<List<Number>, List<Number>> continuation =
       Continuation
@@ -131,6 +160,7 @@ public class ContinuationTest {
     }
   }
 
+  @Test
   public void pascalStringTest() {
     Continuation<Void, String> continuation =
       Continuation.startWithInt(Function.identity())
@@ -139,9 +169,34 @@ public class ContinuationTest {
 
     assertThat(continuation.toFn(() -> null)
                            .apply(Unpooled.buffer()
-                                          .writeByte(6)
+                                          .writeInt(6)
                                           .writeBytes("abcdef".getBytes())),
                is("abcdef"));
+  }
+
+  @Test
+  public void repeatedStringTest() {
+    Continuation<Integer, String> netString =
+      Continuation.startWithInt((Integer a_, Integer i) -> i)
+                  .readString((Integer integer, String s) -> s,
+                              Function.identity());
+
+    Continuation<Void, List<String>> continuation =
+      Continuation.startWithInt(Function.identity())
+                  .repeat(netString,
+                          Function.identity(),
+                          (prev, l) -> l);
+
+    assertThat(continuation.toFn(() -> null)
+                           .apply(Unpooled.buffer()
+                                          .writeInt(3)
+                                          .writeInt(6)
+                                          .writeBytes("abcdef".getBytes())
+                                          .writeInt(5)
+                                          .writeBytes("fghij".getBytes())
+                                          .writeInt(4)
+                                          .writeBytes("klmn".getBytes())),
+               is(Arrays.asList("abcdef", "fghij", "klmn")));
   }
 
   public class Header {
@@ -163,4 +218,5 @@ public class ContinuationTest {
     WITH_NAMES_FOR_VALUES
   }
 }
+
 
