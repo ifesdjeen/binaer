@@ -71,10 +71,10 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
       return (byteBuf) -> {
         CURRENT c = fn.apply(byteBuf);
         if (predicate.test(c)) {
-          return continuation.toFn(() -> c)
+          return continuation.toFn()
                              .apply(c, byteBuf); // TODO: avoid dereferencing every time
         } else if (predicate2.test(c)) {
-          return continuation2.toFn(() -> c)
+          return continuation2.toFn()
                               .apply(c, byteBuf);
         } else {
           throw new RuntimeException("No matching protocol clauses");
@@ -84,10 +84,16 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   }
 
   @Override
-  public BiFunction<PREVIOUS, ByteBuf, CURRENT> toFn(Supplier<PREVIOUS> supplier) {
+  public BiFunction<PREVIOUS, ByteBuf, CURRENT> toFn() {
     return ((previous, byteBuf) -> {
-      // TODO: maybe utilize supplier here?
       return parentContinuation.apply(previous).apply(byteBuf);
+    });
+  }
+
+  @Override
+  public Function<ByteBuf, CURRENT> toFn(Supplier<PREVIOUS> supplier) {
+    return (byteBuf -> {
+      return parentContinuation.apply(supplier.get()).apply(byteBuf);
     });
   }
 
