@@ -1,6 +1,7 @@
-# Continuations
+# Continuation
 
-This project is an implementation of continuation-passing style Byte Buffer consumption.
+`Continuation` is a utility for composing flexible binary protocol parsers by using the Continuation
+Passing Style programming.
 
 When implementing complex protocols, it's often the case that imperative style code turns out to be
 complicated to read, extend and compose. By using CPS, you can create branches, repeats, optional
