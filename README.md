@@ -6,58 +6,115 @@ When implementing complex protocols, it's often the case that imperative style c
 complicated to read, extend and compose. By using CPS, you can create branches, repeats, optional
 fields
 
-# Example
+# Simple Pascal String
 
-Here's a simple example of creating a CPS protocol parser. You simply specify steps in the required
-order one after another, with branching as if you were writing `case` statements, and end up
-having a function that converts `ByteBuf` into desired format:
+Pascal Style strings is the simplest binary protocol you can implement. It's also called `netstrings`
+sometimes. The idea behind it is that you encode the String by encoding it with `int` that indicates
+how many characters there are in the encoded String, followed by the chars themselves:
 
-```java
-Function<ByteBuf, List<Number>> fn = ContinuationImpl
-  // Reads the first byte and constructs an Array that will collect all the seen values
-  .readByte(first -> {
-    List<Number> o = new ArrayList<Number>();
-    o.add(first);
-    return o;
-  })
-          // Constructs two branches: first one will be executed if first read byte is `1`,
-  .branch(list -> list.get(0).intValue() == 1,
-          new BranchStart<List<Number>>()
-            .readByte((List<Number> list, Byte firstBranch) -> {
-              list.add(firstBranch);
-              return list;
-            }),
-          // Second branch will be executed if first read byte is `2`,
-          list -> list.get(0).intValue() == 2,
-          new BranchStart<List<Number>>()
-            .readByte((List<Number> list, Byte firstBranch) -> {
-              list.add((byte) (firstBranch + 1));
-              return list;
-            }))
-   // Will receive the list that was composed by one of the branches and proceed with consuming the buffer
-  .readInt((list, integer) -> {
-    list.add(integer);
-    return list;
-  })
-  .toFn();
+```
+0   4                 10
++---+-----------------+
+| 5 |   a b c d e f   |
++---+-----------------+
 ```
 
-Basically, you construct the set of nested lambdas, that will be executed one after another.
-When branching, evaluation is delayed and further steps are taken only for the branch that
-matches the predicate.
+Writing a parser for it is extremely simple:
+
+```java
+Continuation<Void, String> continuation =
+    Continuation.startWithInt(Function.identity())            // Read the Integer, that specifies the amount of chars in string
+                .readString((Integer integer, String s) -> s, // Return the string itself
+                            Function.identity());
+
+continuation.toFn(() -> null) // Start with "nothing", since we're only interested in the resulting string
+            .apply(Unpooled.buffer()
+                           .writeInt(6)
+                           .writeBytes("abcdef".getBytes()));
+// => "abcdef"
+```
+
+# Branches
+
+With branch, you can choose how you decode the object you're working on.
+For example, you're decoding a protocol that has two data types: `date`
+and `string`
+
+```java
+Continuation<Void, Object> continuation =
+     Continuation
+        .startWithByte(Function.identity())
+        .branch(
+          // If the type is 1, which is our `date`
+          (Byte type) -> type == (byte) 1,
+          Continuation.startWithLong((Byte type, Long l) -> new Date(l)),
+
+           // If the type is 2, which is our `string`
+          (Byte type) -> type == (byte) 2,
+          Continuation.startWithInt((Byte type, Integer stringLength) -> stringLength)
+                      .readString((Integer integer, String s) -> s,
+                                  Function.identity()));
+
+continuation.toFn().apply(null, Unpooled.buffer()
+                                        .writeByte(1)
+                                        .writeLong(System.currentTimeMillis())));
+// Parses a date:
+// => Fri Nov 20 16:44:49 CET 2015
+
+continuation.toFn().apply(null, Unpooled.buffer()
+                                        .writeByte(2)
+                                        .writeInt(6)
+                                        .writeBytes("abcdef".getBytes())));
+// Parses a string:
+// => "abcdef"
+```
+
+# Repeated Fields
+
+Many protocols require something like repeated fields. For example, if we'd like to create a protocol
+parser that consumes a list of strings, we can do it as follows:
+
+```java
+// Define a "repeated" part - our netstring protocol
+Continuation<Integer, String> netString =
+      Continuation.startWithInt((Integer a_, Integer i) -> i)
+                  .readString((Integer integer, String s) -> s,
+                              Function.identity());
+
+// And define a parser for repeated netstrings:
+// We'll first find how many strings there are, and then parse each one of them separately
+Continuation<Void, List<String>> continuation =
+      Continuation.startWithInt(Function.identity())
+                  .repeat(netString,
+                          Function.identity(),
+                          (prev, l) -> l);
+
+continuation.toFn(() -> null)
+            .apply(Unpooled.buffer()
+                           .writeInt(3)
+                           .writeInt(6)
+                           .writeBytes("abcdef".getBytes())
+                           .writeInt(5)
+                           .writeBytes("fghij".getBytes())
+                           .writeInt(4)
+                           .writeBytes("klmn".getBytes())));
+// => ["abcdef", "fghij", "klmn"];
+```
 
 # Project status
 
 So far it's a proof of concept. It was first required to create branching (for example, for cases like
 protocol versioning or possible branches depending on data types).
 
+Every operator you can see (branches, repeated fields and so on) can be nested and combined in any fashion.
+
 # Further Steps
 
-  * Ready protocol spec right from the constructed function.
   * Optional field consumption (field that either gets consumed and buffer rewinded or buffer remains on the
     previous position)
-  * Repeated fields
-
+  * More data types
+  * More combiners
+  * More default protocol implementations
 # License
 
 Copyright(C) 2015-2016 Alex Petrov
