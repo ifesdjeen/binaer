@@ -19,8 +19,11 @@ public interface Continuation<INIT, CURRENT> {
 //  <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
 //                                       Integer length);
 
-  <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
-                                       Function<CURRENT, Integer> length);
+  <T> Continuation<INIT, T> readString(Function<CURRENT, Integer> length,
+                                       BiFunction<CURRENT, String, T> continuation);
+
+  <T> Continuation<INIT, T> readString(Function<CURRENT, Integer> length,
+                                       Function<String, T> continuation);
 
   <T> Continuation<INIT, T> branch(Predicate<CURRENT> predicate,
                                    Continuation<CURRENT, T> continuation,
@@ -34,12 +37,16 @@ public interface Continuation<INIT, CURRENT> {
                                                       Function<CURRENT, Integer> length,
                                                       BiFunction<CURRENT, List<ITEM>, NEXT> merge);
 
+
 //  <T> Continuation<INIT, T> repeat(Continuation<CURRENT, T> continuation,
 //                                   Predicate<T> length);
 
-  BiFunction<INIT, ByteBuf, CURRENT> toFn();
+  BiFunction<INIT, ByteBuf, CURRENT> toBiFn();
 
   Function<ByteBuf, CURRENT> toFn(Supplier<INIT> supplier);
+  Function<ByteBuf, CURRENT> toFn();
+
+
 
   static <CURRENT> Continuation<Void, CURRENT> startWithByte(Function<Byte, CURRENT> continuation) {
     return new ContinuationImpl<Void, CURRENT>((current) -> {

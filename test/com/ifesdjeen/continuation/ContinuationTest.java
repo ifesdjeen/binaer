@@ -49,7 +49,7 @@ public class ContinuationTest {
                             .writeLong(3)
                             .writeByte(4)
                             .writeInt(5);
-      assertThat(continuation.toFn().apply(new LinkedList<>(), buf),
+      assertThat(continuation.toBiFn().apply(new LinkedList<>(), buf),
                  is(new ArrayList<Number>(Arrays.asList((byte) 1, 2, 3L, (byte) 4, 5))));
 
       buf.resetReaderIndex();
@@ -64,7 +64,7 @@ public class ContinuationTest {
                             .writeLong(3)
                             .writeByte(4)
                             .writeInt(5);
-      assertThat(continuation.toFn().apply(new LinkedList<>(), buf),
+      assertThat(continuation.toBiFn().apply(new LinkedList<>(), buf),
                  is(new ArrayList<Number>(Arrays.asList((byte) 2, 2, 3L, (byte) 5, 5))));
       buf.resetReaderIndex();
       assertThat(continuation.toFn(() -> new LinkedList<>()).apply(buf),
@@ -83,19 +83,19 @@ public class ContinuationTest {
 
           (Byte type) -> type == (byte) 2,
           Continuation.startWithInt((Byte type, Integer stringLength) -> stringLength)
-                      .readString((Integer integer, String s) -> s,
-                                  Function.identity()));
+                      .readString(Function.identity(),
+                                  (String s) -> s));
 
     System.out.println(
-      continuation.toFn().apply(null, Unpooled.buffer()
-                                              .writeByte(1)
-                                              .writeLong(System.currentTimeMillis())));
+      continuation.toBiFn().apply(null, Unpooled.buffer()
+                                                .writeByte(1)
+                                                .writeLong(System.currentTimeMillis())));
 
     System.out.println(
-      continuation.toFn().apply(null, Unpooled.buffer()
-                                              .writeByte(2)
-                                              .writeInt(6)
-                                              .writeBytes("abcdef".getBytes())));
+      continuation.toBiFn().apply(null, Unpooled.buffer()
+                                                .writeByte(2)
+                                                .writeInt(6)
+                                                .writeBytes("abcdef".getBytes())));
 
 
   }
@@ -139,7 +139,7 @@ public class ContinuationTest {
                                 .writeInt(300)
                                 .writeInt(2)
                                 .writeInt(3);
-      assertThat(continuation.toFn().apply(new LinkedList<>(), byteBuf),
+      assertThat(continuation.toBiFn().apply(new LinkedList<>(), byteBuf),
                  is(new ArrayList<Number>(Arrays.asList((byte) 1, 300, 102, 3))));
       byteBuf.resetReaderIndex();
       assertThat(continuation.toFn(() -> new LinkedList<>()).apply(byteBuf),
@@ -152,7 +152,7 @@ public class ContinuationTest {
                                 .writeInt(400)
                                 .writeInt(2)
                                 .writeInt(3);
-      assertThat(continuation.toFn().apply(new LinkedList<>(), byteBuf),
+      assertThat(continuation.toBiFn().apply(new LinkedList<>(), byteBuf),
                  is(new ArrayList<Number>(Arrays.asList((byte) 1, 400, 202, 3))));
       byteBuf.resetReaderIndex();
       assertThat(continuation.toFn(() -> new LinkedList<>()).apply(byteBuf),
@@ -164,8 +164,8 @@ public class ContinuationTest {
   public void pascalStringTest() {
     Continuation<Void, String> continuation =
       Continuation.startWithInt(Function.identity())
-                  .readString((Integer integer, String s) -> s,
-                              Function.identity());
+                  .readString(Function.identity(),
+                              (Integer integer, String s) -> s);
 
     assertThat(continuation.toFn(() -> null)
                            .apply(Unpooled.buffer()
@@ -178,7 +178,7 @@ public class ContinuationTest {
   public void repeatedStringTest() {
     Continuation<Integer, String> netString =
       Continuation.startWithInt((Integer a_, Integer i) -> i)
-                  .readString((Integer integer, String s) -> s,
+                  .readString(Function.identity(),
                               Function.identity());
 
     Continuation<Void, List<String>> continuation =

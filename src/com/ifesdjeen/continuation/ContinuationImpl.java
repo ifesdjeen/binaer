@@ -1,7 +1,6 @@
 package com.ifesdjeen.continuation;
 
 import io.netty.buffer.ByteBuf;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,14 +51,14 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
     });
   }
 
-//  @Override
-//  public <T> Continuation<PREVIOUS, T> readString(BiFunction<CURRENT, String, T> continuation, Integer length) {
-//    throw new NotImplementedException();
-//  }
+  //  @Override
+  //  public <T> Continuation<PREVIOUS, T> readString(BiFunction<CURRENT, String, T> continuation, Integer length) {
+  //    throw new NotImplementedException();
+  //  }
 
   @Override
-  public <T> Continuation<PREVIOUS, T> readString(BiFunction<CURRENT, String, T> continuation,
-                                                  Function<CURRENT, Integer> length) {
+  public <T> Continuation<PREVIOUS, T> readString(Function<CURRENT, Integer> length,
+                                                  BiFunction<CURRENT, String, T> continuation) {
 
     return new ContinuationImpl<>((previous) -> {
       Function<ByteBuf, CURRENT> fn = parentContinuation.apply(previous);
@@ -74,6 +73,12 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   }
 
   @Override
+  public <T> Continuation<PREVIOUS, T> readString(Function<CURRENT, Integer> length, Function<String, T> continuation) {
+    return readString(length,
+                      (a, b) -> continuation.apply(b));
+  }
+
+  @Override
   public <T> Continuation<PREVIOUS, T> branch(Predicate<CURRENT> predicate,
                                               Continuation<CURRENT, T> continuation,
                                               Predicate<CURRENT> predicate2,
@@ -83,10 +88,10 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
       return (byteBuf) -> {
         CURRENT c = fn.apply(byteBuf);
         if (predicate.test(c)) {
-          return continuation.toFn()
+          return continuation.toBiFn()
                              .apply(c, byteBuf); // TODO: avoid dereferencing every time
         } else if (predicate2.test(c)) {
-          return continuation2.toFn()
+          return continuation2.toBiFn()
                               .apply(c, byteBuf);
         } else {
           throw new RuntimeException("No matching protocol clauses");
@@ -105,7 +110,7 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
         CURRENT c = fn.apply(byteBuf);
         List<ITEM> l = new ArrayList<>();
         for (int i = 0; i < length.apply(c); i++) {
-          l.add(continuation.toFn().apply(c, byteBuf));
+          l.add(continuation.toBiFn().apply(c, byteBuf));
         }
         return merge.apply(c, l);
       };
@@ -113,7 +118,7 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   }
 
   @Override
-  public BiFunction<PREVIOUS, ByteBuf, CURRENT> toFn() {
+  public BiFunction<PREVIOUS, ByteBuf, CURRENT> toBiFn() {
     return ((previous, byteBuf) -> {
       return parentContinuation.apply(previous).apply(byteBuf);
     });
@@ -123,6 +128,13 @@ public class ContinuationImpl<PREVIOUS, CURRENT> implements Continuation<PREVIOU
   public Function<ByteBuf, CURRENT> toFn(Supplier<PREVIOUS> supplier) {
     return (byteBuf -> {
       return parentContinuation.apply(supplier.get()).apply(byteBuf);
+    });
+  }
+
+  @Override
+  public Function<ByteBuf, CURRENT> toFn() {
+    return (byteBuf -> {
+      return parentContinuation.apply(null).apply(byteBuf);
     });
   }
 
