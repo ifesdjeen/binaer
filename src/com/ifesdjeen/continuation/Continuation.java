@@ -14,6 +14,12 @@ public interface Continuation<CURRENT> { // extends Function<ByteBuf, END>
 
   public <T> Continuation<T> readLong(BiFunction<CURRENT, Long, T> continuation);
 
+  public <T> Continuation<T> readString(BiFunction<CURRENT, String, T> continuation,
+                                        Integer length);
+
+  public <T> Continuation<T> readString(BiFunction<CURRENT, String, T> continuation,
+                                        Function<CURRENT, Integer> length);
+
   public <T> Continuation<T> branch(Predicate<CURRENT> predicate,
                                     NestedContinuation<CURRENT, T> continuation,
                                     Predicate<CURRENT> predicate2,

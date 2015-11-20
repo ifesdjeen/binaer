@@ -10,7 +10,7 @@ public class ContinuationImpl<CURRENT> implements Continuation<CURRENT> {
 
   private final Function<ByteBuf, CURRENT> parentContinuation;
 
-  private ContinuationImpl(Function<ByteBuf, CURRENT> parent) {
+  public ContinuationImpl(Function<ByteBuf, CURRENT> parent) {
     this.parentContinuation = parent;
   }
 
@@ -38,6 +38,26 @@ public class ContinuationImpl<CURRENT> implements Continuation<CURRENT> {
       CURRENT current = parentContinuation.apply(byteBuf);
       long b = byteBuf.readLong();
       return continuation.apply(current, b);
+    });
+  }
+
+  @Override
+  public <T> Continuation<T> readString(BiFunction<CURRENT, String, T> continuation, Integer length) {
+    return new ContinuationImpl<>((byteBuf) -> {
+      CURRENT current = parentContinuation.apply(byteBuf);
+      byte[] bytes = new byte[length];
+      byteBuf.readBytes(bytes);
+      return continuation.apply(current, new String(bytes));
+    });
+  }
+
+  @Override
+  public <T> Continuation<T> readString(BiFunction<CURRENT, String, T> continuation, Function<CURRENT, Integer> length) {
+    return new ContinuationImpl<>((byteBuf) -> {
+      CURRENT current = parentContinuation.apply(byteBuf);
+      byte[] bytes = new byte[length.apply(current)];
+      byteBuf.readBytes(bytes);
+      return continuation.apply(current, new String(bytes));
     });
   }
 

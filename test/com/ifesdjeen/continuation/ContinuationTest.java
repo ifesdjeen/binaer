@@ -118,7 +118,20 @@ public class ContinuationTest {
                                 .writeInt(2)
                                 .writeInt(3)),
                is(new ArrayList<Number>(Arrays.asList((byte) 1, 400, 202, 3))));
-    //
+  }
+
+  public void pascalStringTest() {
+    Function<ByteBuf, String> fn =
+      Continuation
+        .readInt(Function.identity())
+        .readString((Integer current, String str) -> str,
+                    Function.identity())
+        .toFn();
+
+    assertThat(fn.apply(Unpooled.buffer()
+                                .writeByte(6)
+                                .writeBytes("abcdef".getBytes())),
+               is("abcdef"));
   }
 
   public class Header {
