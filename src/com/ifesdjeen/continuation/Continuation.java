@@ -9,26 +9,26 @@ import java.util.function.Supplier;
 
 public interface Continuation<INIT, CURRENT> {
 
-  public <T> Continuation<INIT, T> readByte(BiFunction<CURRENT, Byte, T> continuation);
+  <T> Continuation<INIT, T> readByte(BiFunction<CURRENT, Byte, T> continuation);
 
-  public <T> Continuation<INIT, T> readInt(BiFunction<CURRENT, Integer, T> continuation);
+  <T> Continuation<INIT, T> readInt(BiFunction<CURRENT, Integer, T> continuation);
 
-  public <T> Continuation<INIT, T> readLong(BiFunction<CURRENT, Long, T> continuation);
+  <T> Continuation<INIT, T> readLong(BiFunction<CURRENT, Long, T> continuation);
 
-  public <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
-                                              Integer length);
+  <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
+                                       Integer length);
 
-  public <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
-                                              Function<CURRENT, Integer> length);
+  <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
+                                       Function<CURRENT, Integer> length);
 
-  public <T> Continuation<INIT, T> branch(Predicate<CURRENT> predicate,
-                                          Continuation<CURRENT, T> continuation,
-                                          Predicate<CURRENT> predicate2,
-                                          Continuation<CURRENT, T> continuation2);
+  <T> Continuation<INIT, T> branch(Predicate<CURRENT> predicate,
+                                   Continuation<CURRENT, T> continuation,
+                                   Predicate<CURRENT> predicate2,
+                                   Continuation<CURRENT, T> continuation2);
 
-  public BiFunction<INIT, ByteBuf, CURRENT> toFn();
+  BiFunction<INIT, ByteBuf, CURRENT> toFn();
 
-  public Function<ByteBuf, CURRENT> toFn(Supplier<INIT> supplier);
+  Function<ByteBuf, CURRENT> toFn(Supplier<INIT> supplier);
 
   static <CURRENT> Continuation<Void, CURRENT> startWithByte(Function<Byte, CURRENT> continuation) {
     return new ContinuationImpl<Void, CURRENT>((current) -> {
