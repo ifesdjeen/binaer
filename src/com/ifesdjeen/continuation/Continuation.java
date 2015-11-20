@@ -20,6 +20,32 @@ public interface Continuation<CURRENT> { // extends Function<ByteBuf, END>
                                     NestedContinuation<CURRENT, T> continuation2);
 
   public Function<ByteBuf, CURRENT> toFn();
+
+  public static <CURRENT> NestedContinuation<CURRENT, CURRENT> branch() {
+    return new BranchStart<CURRENT>();
+  }
+
+  public static <T> Continuation<T> readByte(Function<Byte, T> continuation) {
+    return new ContinuationImpl<>((byteBuf) -> {
+      byte b = byteBuf.readByte();
+      return continuation.apply(b);
+    });
+  }
+
+  public static <T> Continuation<T> readInt(Function<Integer, T> continuation) {
+    return new ContinuationImpl<>((byteBuf) -> {
+      int b = byteBuf.readInt();
+      return continuation.apply(b);
+    });
+  }
+
+  public static <T> Continuation<T> readLong(Function<Long, T> continuation) {
+    return new ContinuationImpl<>((byteBuf) -> {
+      long b = byteBuf.readLong();
+      return continuation.apply(b);
+    });
+  }
+
   //public <T> Continuation<T, END> repeat(BiFunction<CURRENT, Integer, T> continuation);
 
   // public <T> Continuation<T, END> optional(BiFunction<CURRENT, Integer, Optional<T>> optional);

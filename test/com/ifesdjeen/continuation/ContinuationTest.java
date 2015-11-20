@@ -18,7 +18,7 @@ public class ContinuationTest {
   @Test
   public void simpleProtocolTest() {
     Function<ByteBuf, List<Number>> fn =
-      ContinuationImpl
+      Continuation
         .readByte(first -> {
           List<Number> o = new ArrayList<Number>();
           o.add(first);
@@ -33,13 +33,13 @@ public class ContinuationTest {
           return list;
         })
         .branch(list -> list.get(0).intValue() == 1,
-                new BranchStart<List<Number>>()
+                Continuation.<List<Number>>branch()
                   .readByte((List<Number> list, Byte firstBranch) -> {
                     list.add(firstBranch);
                     return list;
                   }),
                 list -> list.get(0).intValue() == 2,
-                new BranchStart<List<Number>>()
+                Continuation.<List<Number>>branch()
                   .readByte((List<Number> list, Byte firstBranch) -> {
                     list.add((byte) (firstBranch + 1));
                     return list;
@@ -69,31 +69,31 @@ public class ContinuationTest {
   @Test
   public void nestedBranchTest() {
     Function<ByteBuf, List<Number>> fn =
-      ContinuationImpl
+      Continuation
         .readByte(first -> {
           List<Number> o = new ArrayList<Number>();
           o.add(first);
           return o;
         })
         .branch(list -> list.get(0).intValue() == 1,
-                new BranchStart<List<Number>>()
+                Continuation.<List<Number>>branch()
                   .readInt((List<Number> list, Integer firstBranch) -> {
                     list.add(firstBranch);
                     return list;
                   }).branch(list -> list.get(1).intValue() == 300,
-                            new BranchStart<List<Number>>()
+                            Continuation.<List<Number>>branch()
                               .readInt((list, i) -> {
                                 list.add(i + 100);
                                 return list;
                               }),
                             list -> list.get(1).intValue() == 400,
-                            new BranchStart<List<Number>>()
+                            Continuation.<List<Number>>branch()
                               .readInt((list, i) -> {
                                 list.add(i + 200);
                                 return list;
                               })),
                 list -> list.get(0).intValue() == 2,
-                new BranchStart<List<Number>>()
+                Continuation.<List<Number>>branch()
                   .readByte((List<Number> list, Byte firstBranch) -> {
                     list.add(firstBranch);
                     return list;

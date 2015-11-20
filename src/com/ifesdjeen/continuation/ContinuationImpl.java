@@ -85,25 +85,4 @@ public class ContinuationImpl<CURRENT> implements Continuation<CURRENT> {
 
   // TODO: contunue
 
-  public static <T> Continuation<T> readByte(Function<Byte, T> continuation) {
-    return new ContinuationImpl<>((byteBuf) -> {
-      byte b = byteBuf.readByte();
-      return continuation.apply(b);
-    });
-  }
-
-  public static <T> Continuation<T> readInt(Function<Integer, T> continuation) {
-    return new ContinuationImpl<>((byteBuf) -> {
-      int b = byteBuf.readInt();
-      return continuation.apply(b);
-    });
-  }
-
-  public static <T> Continuation<T> readLong(Function<Long, T> continuation) {
-    return new ContinuationImpl<>((byteBuf) -> {
-      long b = byteBuf.readLong();
-      return continuation.apply(b);
-    });
-  }
-
 }
