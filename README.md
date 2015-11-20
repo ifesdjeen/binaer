@@ -7,11 +7,19 @@ When implementing complex protocols, it's often the case that imperative style c
 complicated to read, extend and compose. By using CPS, you can create branches, repeats, optional
 fields
 
-# Simple Pascal String
+# General idea
 
-Pascal Style strings is the simplest binary protocol you can implement. It's also called `netstrings`
-sometimes. The idea behind it is that you encode the String by encoding it with `int` that indicates
-how many characters there are in the encoded String, followed by the chars themselves:
+In order to construct a flexible parser, you should parse things in an
+incremental fashion and keep all parts of the parser interchangeable.
+Continuation is helping you to create an incremental parser (e.g. one that will
+execute one step at a time, and each step will receive the result of execution
+of the previous step).
+
+Let's look at a simple example of the Pascal-style Strings. This is probably the
+simplest part of the binary protocol one can implement. It's also called
+`netstrings` sometimes. The idea behind it is that you encode the String by
+encoding it with `int` that indicates how many characters there are in the
+encoded String, followed by the chars themselves:
 
 ```
 0   4                 10
@@ -20,26 +28,35 @@ how many characters there are in the encoded String, followed by the chars thems
 +---+-----------------+
 ```
 
-Writing a parser for it is extremely simple:
+We create a `Continuation`. Our first function receives `Integer` `(1)`, which
+is the size of the String that follows it. The function `(2)` will "extract" the
+length of the string. In our case it's `identity`. Now, as we know the length of
+our String, we can read it with `(3)`, which will discard the String length and
+return just the resulting String.
+
 
 ```java
-Continuation<Void, String> continuation =
-    Continuation.startWithInt(Function.identity())            // Read the Integer, that specifies the amount of chars in string
-                .readString((Integer integer, String s) -> s, // Return the string itself
-                            Function.identity());
+Function<ByteBuf, String> continuation =
+    Continuation.startWithInt(Function.identity())   // (1) Integer -> Integer: reads the Integer, that specifies the amount of chars in string
+                .readString(Function.identity(),     // (2) Integer -> Integer: Function that extracts the length of the string
+                            (String s) -> s)         // (3) String -> String: Return the decoded string itself
+                .toFn();
 
-continuation.toFn(() -> null) // Start with "nothing", since we're only interested in the resulting string
-            .apply(Unpooled.buffer()
+continuation.apply(Unpooled.buffer()
                            .writeInt(6)
                            .writeBytes("abcdef".getBytes()));
 // => "abcdef"
 ```
 
+Continuation constructs a function that, given a `ByteBuf` instance, will pass
+it through the chain of `Integer -> Integer -> String` functions and return a
+`String` result in the end. In real world you would be first constructing a
+`Frame Header`, then `Frame`, then adding `Frame Body`to it etc.
+
 # Branches
 
-With branch, you can choose how you decode the object you're working on.
-For example, you're decoding a protocol that has two data types: `date`
-and `string`
+With branch, you can choose how you decode the object you're working on. For
+example, you're decoding a protocol that has two data types: `date` and `string`
 
 ```java
 Continuation<Void, Object> continuation =
@@ -58,8 +75,8 @@ Continuation<Void, Object> continuation =
 
 continuation.toFn().apply(null, Unpooled.buffer()
                                         .writeByte(1)
-                                        .writeLong(System.currentTimeMillis())));
-// Parses a date:
+                                        .writeLong(System.currentTimeMillis()));
+                                        //) Parses a date:
 // => Fri Nov 20 16:44:49 CET 2015
 
 continuation.toFn().apply(null, Unpooled.buffer()
@@ -104,15 +121,18 @@ continuation.toFn(() -> null)
 
 # Project status
 
-So far it's a proof of concept. It was first required to create branching (for example, for cases like
-protocol versioning or possible branches depending on data types).
+So far it's a proof of concept. It was first required to create branching (for
+example, for cases like protocol versioning or possible branches depending on
+data types).
 
-Every operator you can see (branches, repeated fields and so on) can be nested and combined in any fashion.
+Every operator you can see (branches, repeated fields and so on) can be nested
+and combined in any fashion.
 
 # Further Steps
 
-  * Optional field consumption (field that either gets consumed and buffer rewinded or buffer remains on the
-    previous position)
+  * Protocol Spec Blueprints generated from consuming functions
+  * Optional field consumption (field that either gets consumed and buffer
+    rewinded or buffer remains on the previous position)
   * More data types
   * More combiners
   * More default protocol implementations
