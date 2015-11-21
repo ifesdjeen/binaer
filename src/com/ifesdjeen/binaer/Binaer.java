@@ -28,8 +28,8 @@ public interface Binaer<INIT, CURRENT> {
     return readLong((a_, t) -> continuation.apply(t));
   }
 
-//  <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
-//                                       Integer length);
+  //  <T> Continuation<INIT, T> readString(BiFunction<CURRENT, String, T> continuation,
+  //                                       Integer length);
 
   <T> Binaer<INIT, T> readString(Function<CURRENT, Integer> length,
                                  BiFunction<CURRENT, String, T> continuation);
@@ -45,22 +45,18 @@ public interface Binaer<INIT, CURRENT> {
                              Predicate<CURRENT> predicate2,
                              Binaer<CURRENT, T> continuation2);
 
-//  <T> Continuation<INIT, T> repeat(Continuation<CURRENT, T> continuation,
-//                                   Integer length);
+  <ITEM, NEXT> Binaer<INIT, NEXT> repeat(Binaer<CURRENT, ITEM> continuation,
+                                         Function<CURRENT, Integer> length,
+                                         BiFunction<CURRENT, List<ITEM>, NEXT> merge);
 
-  public <ITEM, NEXT> Binaer<INIT, NEXT> repeat(Binaer<CURRENT, ITEM> continuation,
-                                                Function<CURRENT, Integer> length,
-                                                BiFunction<CURRENT, List<ITEM>, NEXT> merge);
-
-
-//  <T> Continuation<INIT, T> repeat(Continuation<CURRENT, T> continuation,
-//                                   Predicate<T> length);
+  //  <T> Continuation<INIT, T> repeat(Continuation<CURRENT, T> continuation,
+  //                                   Predicate<T> length);
 
   BiFunction<INIT, ByteBuf, CURRENT> toBiFn();
 
   Function<ByteBuf, CURRENT> toFn(Supplier<INIT> supplier);
-  Function<ByteBuf, CURRENT> toFn();
 
+  Function<ByteBuf, CURRENT> toFn();
 
 
   static <CURRENT> Binaer<Void, CURRENT> startWithByte(Function<Byte, CURRENT> continuation) {

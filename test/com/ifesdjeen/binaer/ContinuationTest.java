@@ -199,24 +199,18 @@ public class ContinuationTest {
                is(Arrays.asList("abcdef", "fghij", "klmn")));
   }
 
-  public class Header {
-    public String           version;
-    public Set<HeaderFlags> flags;
-
-    @Override
-    public String toString() {
-      return "Header{" +
-             "version='" + version + '\'' +
-             ", flags=" + flags +
-             '}';
-    }
-  }
-
-  enum HeaderFlags {
-    SERIAL_CONSISTENCY,
-    DEFAULT_TIMESTAMP,
-    WITH_NAMES_FOR_VALUES
-  }
+//  public class Header {
+//    public String           version;
+//    public Set<HeaderFlags> flags;
+//
+//    @Override
+//    public String toString() {
+//      return "Header{" +
+//             "version='" + version + '\'' +
+//             ", flags=" + flags +
+//             '}';
+//    }
+//  }
 }
 
 

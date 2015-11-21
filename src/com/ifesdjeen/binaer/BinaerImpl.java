@@ -130,5 +130,4 @@ public class BinaerImpl<INIT, CURRENT> implements Binaer<INIT, CURRENT> {
       return parentContinuation.apply(null).apply(byteBuf);
     });
   }
-
 }
