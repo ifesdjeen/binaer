@@ -126,14 +126,63 @@ parser.apply(Unpooled.buffer()
 // => ["abcdef", "fghij", "klmn"];
 ```
 
-# Project status
+# Working with Flags
 
-So far it's a proof of concept. It was first required to create branching (for
-example, for cases like protocol versioning or possible branches depending on
-data types).
+When designing a binary protocol, it's often important to create a compact representation of flags.
+Binär got you covered here, too. In order to get up and running, all you need to know is
+to create an `Enum` that represents your flags and a mapper `Function` that would map
+a Flag to it's index in the resulting "bitset", for example:
 
-Every operator you can see (branches, repeated fields and so on) can be nested
-and combined in any fashion.
+```java
+enum HeaderFlags {
+  SERIAL_CONSISTENCY,
+  DEFAULT_TIMESTAMP,
+  WITH_NAMES_FOR_VALUES
+  }
+
+Function<HeaderFlags, Integer> mapper = flag -> {
+  switch (flag) {
+    case SERIAL_CONSISTENCY:
+      return 0;
+    case DEFAULT_TIMESTAMP:
+      return 1;
+    case WITH_NAMES_FOR_VALUES:
+      return 2;
+  }
+  throw new RuntimeException("Couldn't find a matching clause");
+};
+```
+
+Now you can get, set flags, get all the set flag values and so on:
+
+```java
+int i = 0;
+
+// Will set a `SERIAL_CONSISTENCY` flag
+i = FlagHelper.setFlag(i,
+                       mapper,
+                       HeaderFlags.SERIAL_CONSISTENCY);
+
+// Check if the flag is set
+FlagHelper.isFlagSet(i,
+                     mapper,
+                     HeaderFlags.SERIAL_CONSISTENCY);
+// => true
+
+// Set multiple flags at a time:
+i = FlagHelper.setFlags(i,
+                        mapper,
+                        HeaderFlags.SERIAL_CONSISTENCY,
+                        HeaderFlags.WITH_NAMES_FOR_VALUES);
+
+// Get all the set flags:
+FlagHelper.getSetFlags(i,
+                       mapper,
+                       HeaderFlags.values());
+// => [ HeaderFlags.SERIAL_CONSISTENCY, HeaderFlags.WITH_NAMES_FOR_VALUES ]
+```
+
+And more...
 
 # Further Steps
 
